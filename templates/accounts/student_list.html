@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block page_title %}Students{% endblock %}
+{% block breadcrumb %}People → Students{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'add_student' %}" class="btn-maroon" style="padding:8px 16px;font-size:13px;">
+  <i class="fas fa-plus me-2"></i>Add Student
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card mb-4">
+  <div class="card-body-pad" style="padding:16px 24px;">
+    <form method="get" class="d-flex gap-3 align-items-end">
+      <div style="flex:1;">
+        <label class="form-label">Search</label>
+        <input type="text" name="q" class="form-control" placeholder="Name or Roll No..." value="{{ q }}">
+      </div>
+      <div style="width:120px;">
+        <label class="form-label">Section</label>
+        <input type="text" name="section" class="form-control" placeholder="A, B..." value="{{ section }}">
+      </div>
+      <button type="submit" class="btn-maroon" style="padding:10px 20px;">Search</button>
+      <a href="{% url 'student_list' %}" class="btn-ghost" style="padding:10px 16px;">Clear</a>
+    </form>
+  </div>
+</div>
+<div class="glass-card">
+  <div class="card-head" style="justify-content:space-between;">
+    <span><i class="fas fa-user-graduate"></i> Students</span>
+    <span style="color:var(--text-muted);font-size:13px;">{{ students.count }} total</span>
+  </div>
+  <table class="smart-table">
+    <thead><tr><th>Student</th><th>Roll No</th><th>Section</th><th>Face</th><th>Attendance</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for s in students %}
+      <tr>
+        <td>
+          {% if s.photo %}<img src="{{ s.photo.url }}" class="student-avatar me-2">
+          {% else %}<span class="student-avatar-placeholder me-2">{{ s.name|first }}</span>{% endif %}
+          <div style="display:inline-block;vertical-align:middle;">
+            <div style="font-weight:600;color:white;">{{ s.name }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">{{ s.email }}</div>
+          </div>
+        </td>
+        <td><code style="color:var(--gold);">{{ s.roll_number }}</code></td>
+        <td><span style="background:var(--surface3);padding:3px 10px;border-radius:6px;font-size:12px;">{{ s.section }}</span></td>
+        <td>{% if s.face_enrolled %}<span style="color:#10b981;font-size:12px;"><i class="fas fa-check-circle me-1"></i>Enrolled</span>{% else %}<span style="color:#ef4444;font-size:12px;"><i class="fas fa-times-circle me-1"></i>Missing</span>{% endif %}</td>
+        <td>
+          {% with pct=s.attendance_percentage %}
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="prog-bar" style="width:60px;"><div class="fill" style="width:{{ pct }}%;background:{% if pct >= 75 %}var(--success){% else %}var(--danger){% endif %};"></div></div>
+            <span style="font-size:12px;color:{% if pct >= 75 %}#10b981{% else %}#ef4444{% endif %};">{{ pct }}%</span>
+          </div>
+          {% endwith %}
+        </td>
+        <td>
+          <a href="{% url 'student_detail' s.pk %}" class="btn-ghost" style="padding:5px 10px;font-size:12px;">View</a>
+          <a href="{% url 'edit_student' s.pk %}" class="btn-ghost ms-1" style="padding:5px 10px;font-size:12px;">Edit</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:50px;">No students. <a href="{% url 'add_student' %}" style="color:var(--gold);">Add one →</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

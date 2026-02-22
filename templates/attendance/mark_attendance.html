@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block page_title %}Mark Attendance{% endblock %}
+{% block breadcrumb %}Sessions → Manual Marking{% endblock %}
+
+{% block topbar_actions %}
+{% if session.mode != 'manual' %}
+<a href="{% url 'face_attendance' session.pk %}" class="btn-gold" style="padding:8px 16px;font-size:13px;">
+  <i class="fas fa-face-smile-wink me-2"></i>Switch to Face AI
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#10b981;padding:16px;">
+      <div class="num" id="present-n" style="font-size:28px;color:#10b981;">0</div>
+      <div class="label">Present</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#ef4444;padding:16px;">
+      <div class="num" id="absent-n" style="font-size:28px;color:#ef4444;">{{ students.count }}</div>
+      <div class="label">Absent</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#f59e0b;padding:16px;">
+      <div class="num" id="late-n" style="font-size:28px;color:#f59e0b;">0</div>
+      <div class="label">Late</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#818cf8;padding:16px;">
+      <div class="num" style="font-size:28px;color:#818cf8;">{{ students.count }}</div>
+      <div class="label">Total</div>
+    </div>
+  </div>
+</div>
+
+<div class="glass-card">
+  <div class="card-head" style="justify-content:space-between;">
+    <span><i class="fas fa-users"></i> {{ session.course.name }} | {{ session.date }} | Section {{ session.section }}</span>
+    <div class="d-flex gap-2">
+      <button onclick="markAll('present')" class="btn-ghost" style="padding:7px 14px;font-size:13px;color:#10b981;border-color:rgba(16,185,129,0.3);">
+        <i class="fas fa-check-double me-1"></i>All Present
+      </button>
+      <button onclick="markAll('absent')" class="btn-ghost" style="padding:7px 14px;font-size:13px;color:#ef4444;border-color:rgba(239,68,68,0.3);">
+        <i class="fas fa-times me-1"></i>All Absent
+      </button>
+    </div>
+  </div>
+
+  <form method="post" id="attendance-form">
+    {% csrf_token %}
+    <table class="smart-table">
+      <thead>
+        <tr>
+          <th width="40">#</th>
+          <th>Student</th>
+          <th>Roll No</th>
+          <th>Mark Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        <tr id="row-{{ student.id }}" style="transition:background 0.2s;">
+          <td style="color:var(--text-muted);">{{ forloop.counter }}</td>
+          <td>
+            {% if student.photo %}
+            <img src="{{ student.photo.url }}" class="student-avatar me-2">
+            {% else %}
+            <span class="student-avatar-placeholder me-2">{{ student.name|first }}</span>
+            {% endif %}
+            <strong style="color:white;">{{ student.name }}</strong>
+          </td>
+          <td><code style="color:var(--gold);">{{ student.roll_number }}</code></td>
+          <td>
+            <input type="hidden" name="status_{{ student.id }}" id="status-{{ student.id }}" value="absent">
+            <div class="d-flex gap-2">
+              <button type="button" onclick="setStatus({{ student.id }}, 'present')"
+                id="btn-present-{{ student.id }}"
+                style="padding:7px 14px;border-radius:8px;border:1px solid rgba(16,185,129,0.3);background:rgba(16,185,129,0.1);color:#6ee7b7;font-size:13px;cursor:pointer;transition:all 0.2s;">
+                <i class="fas fa-check me-1"></i>Present
+              </button>
+              <button type="button" onclick="setStatus({{ student.id }}, 'late')"
+                id="btn-late-{{ student.id }}"
+                style="padding:7px 14px;border-radius:8px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.1);color:#fcd34d;font-size:13px;cursor:pointer;transition:all 0.2s;">
+                <i class="fas fa-clock me-1"></i>Late
+              </button>
+              <button type="button" onclick="setStatus({{ student.id }}, 'absent')"
+                id="btn-absent-{{ student.id }}"
+                style="padding:7px 14px;border-radius:8px;border:2px solid rgba(239,68,68,0.5);background:rgba(239,68,68,0.2);color:#fca5a5;font-size:13px;cursor:pointer;transition:all 0.2s;">
+                <i class="fas fa-times me-1"></i>Absent ✓
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:50px;">
+          <i class="fas fa-exclamation-circle" style="font-size:32px;opacity:0.3;display:block;margin-bottom:12px;"></i>
+          No students in this section/department.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if students %}
+    <div style="padding:20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <span style="color:var(--text-muted);font-size:13px;">
+        <i class="fas fa-info-circle me-1"></i>Absent students will be auto-notified
+      </span>
+      <button type="submit" class="btn-maroon" style="padding:12px 28px;">
+        <i class="fas fa-save me-2"></i>Submit Attendance
+      </button>
+    </div>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const statuses = {};
+
+document.getElementById('attendance-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const present = [], late = [], absent = [];
+  document.querySelectorAll('[id^="status-"]').forEach(el => {
+    const id = el.id.replace('status-', '');
+    if (el.value === 'present') present.push(id);
+    else if (el.value === 'late') late.push(id);
+    else absent.push(id);
+  });
+  present.forEach(id => appendHidden('present_students', id));
+  late.forEach(id => appendHidden('late_students', id));
+  this.submit();
+});
+
+function appendHidden(name, val) {
+  const inp = document.createElement('input');
+  inp.type = 'hidden'; inp.name = name; inp.value = val;
+  document.getElementById('attendance-form').appendChild(inp);
+}
+
+function setStatus(id, status) {
+  document.getElementById(`status-${id}`).value = status;
+  statuses[id] = status;
+
+  const row = document.getElementById(`row-${id}`);
+  row.style.background = status === 'present' ? 'rgba(16,185,129,0.06)' :
+                          status === 'late' ? 'rgba(245,158,11,0.06)' : '';
+
+  ['present','late','absent'].forEach(s => {
+    const btn = document.getElementById(`btn-${s}-${id}`);
+    const active = s === status;
+    if (s === 'present') {
+      btn.style.background = active ? 'rgba(16,185,129,0.3)' : 'rgba(16,185,129,0.1)';
+      btn.style.borderWidth = active ? '2px' : '1px';
+      btn.style.fontWeight = active ? '700' : '400';
+    } else if (s === 'late') {
+      btn.style.background = active ? 'rgba(245,158,11,0.3)' : 'rgba(245,158,11,0.1)';
+      btn.style.borderWidth = active ? '2px' : '1px';
+      btn.style.fontWeight = active ? '700' : '400';
+    } else {
+      btn.style.background = active ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.1)';
+      btn.style.borderWidth = active ? '2px' : '1px';
+      btn.style.fontWeight = active ? '700' : '400';
+    }
+    btn.textContent = btn.textContent.replace(' ✓', '');
+    if (active) btn.innerHTML += ' ✓';
+  });
+  updateCounts();
+}
+
+function markAll(status) {
+  document.querySelectorAll('[id^="status-"]').forEach(el => {
+    setStatus(el.id.replace('status-', ''), status);
+  });
+}
+
+function updateCounts() {
+  const vals = [...document.querySelectorAll('[id^="status-"]')].map(e => e.value);
+  document.getElementById('present-n').textContent = vals.filter(v => v === 'present').length;
+  document.getElementById('absent-n').textContent = vals.filter(v => v === 'absent').length;
+  document.getElementById('late-n').textContent = vals.filter(v => v === 'late').length;
+}
+</script>
+{% endblock %}

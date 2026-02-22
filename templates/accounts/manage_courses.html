@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block page_title %}Courses{% endblock %}
+{% block content %}
+<div class="row g-4">
+<div class="col-md-5"><div class="glass-card"><div class="card-head"><i class="fas fa-plus"></i> Add Course</div>
+<div class="card-body-pad"><form method="post">{% csrf_token %}
+<div class="mb-3"><label class="form-label">Course Name</label>{{ course_form.name }}</div>
+<div class="mb-3"><label class="form-label">Code</label>{{ course_form.code }}</div>
+<div class="mb-3"><label class="form-label">Department</label>{{ course_form.department }}</div>
+<div class="mb-3"><label class="form-label">Credits</label>{{ course_form.credits }}</div>
+<button type="submit" class="btn-maroon w-100" style="padding:12px;">Add Course</button>
+</form></div></div></div>
+<div class="col-md-7"><div class="glass-card"><div class="card-head"><i class="fas fa-book"></i> Courses</div>
+<table class="smart-table">
+<thead><tr><th>Course</th><th>Code</th><th>Department</th><th>Credits</th></tr></thead>
+<tbody>{% for c in courses %}
+<tr><td style="color:white;font-weight:600;">{{ c.name }}</td><td><code style="color:var(--gold);">{{ c.code }}</code></td><td>{{ c.department.code }}</td><td>{{ c.credits }}</td></tr>
+{% empty %}<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">No courses yet.</td></tr>{% endfor %}
+</tbody></table></div></div>
+</div>{% endblock %}

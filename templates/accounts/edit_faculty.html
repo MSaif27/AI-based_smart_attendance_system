@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block page_title %}Edit Faculty{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+<div class="glass-card"><div class="card-head"><i class="fas fa-edit"></i> Edit — {{ faculty.name }}</div>
+<div class="card-body-pad">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+<div class="row g-3">
+<div class="col-md-6"><label class="form-label">Full Name</label>{{ faculty_form.name }}</div>
+<div class="col-md-6"><label class="form-label">Employee ID</label>{{ faculty_form.employee_id }}</div>
+<div class="col-md-6"><label class="form-label">Email</label>{{ faculty_form.email }}</div>
+<div class="col-md-6"><label class="form-label">Phone</label>{{ faculty_form.phone }}</div>
+<div class="col-md-6"><label class="form-label">Qualification</label>{{ faculty_form.qualification }}</div>
+<div class="col-md-6"><label class="form-label">Joining Date</label>{{ faculty_form.joined_date }}</div>
+<div class="col-12"><label class="form-label">Courses</label>{{ faculty_form.courses }}</div>
+<div class="col-12"><label class="form-label">Photo</label>{{ faculty_form.photo }}</div>
+<div class="col-12">{{ faculty_form.is_active }} <label class="form-label" style="display:inline;margin-left:8px;">Active</label></div>
+</div>
+<div class="d-flex gap-3 mt-4">
+<button type="submit" class="btn-maroon" style="padding:12px 28px;">Save Changes</button>
+<a href="{% url 'faculty_list' %}" class="btn-ghost" style="padding:12px 20px;">Cancel</a>
+</div>
+</form></div></div></div></div>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block page_title %}Add Student{% endblock %}
+{% block breadcrumb %}Students → Add New{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="glass-card">
+      <div class="card-head"><i class="fas fa-user-plus"></i> Student Information</div>
+      <div class="card-body-pad">
+        <form method="post" enctype="multipart/form-data" id="student-form">
+          {% csrf_token %}
+          <input type="hidden" name="webcam_photo" id="webcam-photo-data">
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Full Name *</label>
+              {{ student_form.name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Roll Number *</label>
+              {{ student_form.roll_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              {{ student_form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Parent Email</label>
+              {{ student_form.parent_email }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Phone</label>
+              {{ student_form.phone }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Parent Phone</label>
+              {{ student_form.parent_phone }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Section</label>
+              {{ student_form.section }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Semester</label>
+              {{ student_form.semester }}
+            </div>
+          </div>
+
+          <hr style="border-color:var(--border);margin:24px 0;">
+          <p style="color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Login Access (Optional)</p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Username</label>
+              {{ user_form.username }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Password</label>
+              {{ user_form.password }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-maroon">
+              <i class="fas fa-save me-2"></i> Save Student
+            </button>
+            <a href="{% url 'student_list' %}" class="btn-ghost">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <!-- FACE PHOTO PANEL -->
+    <div class="glass-card">
+      <div class="card-head"><i class="fas fa-camera"></i> Face Photo (Required for AI Attendance)</div>
+      <div class="card-body-pad">
+        <!-- Tab buttons -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;">
+          <button onclick="showTab('webcam')" id="tab-webcam" class="btn-maroon" style="flex:1;padding:10px;">
+            <i class="fas fa-video me-2"></i>Webcam
+          </button>
+          <button onclick="showTab('upload')" id="tab-upload" class="btn-ghost" style="flex:1;padding:10px;">
+            <i class="fas fa-upload me-2"></i>Upload
+          </button>
+        </div>
+
+        <!-- Webcam Tab -->
+        <div id="webcam-tab">
+          <div class="webcam-box" id="webcam-box">
+            <video id="webcam-video" width="100%" height="240" autoplay playsinline style="display:none;border-radius:12px;"></video>
+            <canvas id="webcam-canvas" width="400" height="300" style="display:none;"></canvas>
+            <img id="captured-img" src="" style="display:none;width:100%;border-radius:12px;max-height:240px;object-fit:cover;">
+            <div id="webcam-placeholder" style="padding:50px 20px;color:var(--text-muted);">
+              <i class="fas fa-camera" style="font-size:48px;opacity:0.3;margin-bottom:16px;display:block;"></i>
+              <p style="font-size:14px;">Click "Start Camera" to capture photo</p>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" onclick="startWebcam()" id="btn-start" class="btn-gold" style="flex:1;">
+              <i class="fas fa-video me-2"></i>Start Camera
+            </button>
+            <button type="button" onclick="capturePhoto()" id="btn-capture" class="btn-maroon" style="flex:1;display:none;">
+              <i class="fas fa-camera me-2"></i>Capture
+            </button>
+            <button type="button" onclick="retakePhoto()" id="btn-retake" class="btn-ghost" style="flex:1;display:none;">
+              <i class="fas fa-redo me-2"></i>Retake
+            </button>
+          </div>
+          <div id="face-status" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="upload-tab" style="display:none;">
+          <div class="webcam-box" style="padding:30px;">
+            <i class="fas fa-cloud-upload-alt" style="font-size:40px;color:var(--text-muted);opacity:0.4;margin-bottom:12px;display:block;"></i>
+            <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">Upload a clear front-facing photo</p>
+            {{ student_form.photo }}
+          </div>
+          <div class="smart-alert info mt-3" style="font-size:13px;">
+            <i class="fas fa-info-circle me-2"></i> Clear face photos improve recognition accuracy significantly.
+          </div>
+        </div>
+
+        <div class="smart-alert warning mt-3" style="font-size:12px;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          A face photo is <strong>required</strong> for Face Recognition attendance. Without it, only manual marking will work.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let stream = null;
+
+function showTab(tab) {
+  document.getElementById('webcam-tab').style.display = tab === 'webcam' ? 'block' : 'none';
+  document.getElementById('upload-tab').style.display = tab === 'upload' ? 'block' : 'none';
+  document.getElementById('tab-webcam').className = tab === 'webcam' ? 'btn-maroon' : 'btn-ghost';
+  document.getElementById('upload-tab-btn') // handled by onclick directly
+  document.getElementById('tab-upload').className = tab === 'upload' ? 'btn-maroon' : 'btn-ghost';
+}
+
+async function startWebcam() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width:640, height:480 } });
+    const video = document.getElementById('webcam-video');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('webcam-placeholder').style.display = 'none';
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-capture').style.display = 'block';
+  } catch(e) {
+    document.getElementById('face-status').innerHTML = '<div class="smart-alert danger">Camera access denied. Please allow camera permission.</div>';
+  }
+}
+
+function capturePhoto() {
+  const video = document.getElementById('webcam-video');
+  const canvas = document.getElementById('webcam-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  document.getElementById('webcam-photo-data').value = dataUrl;
+
+  // Show captured image
+  const img = document.getElementById('captured-img');
+  img.src = dataUrl;
+  img.style.display = 'block';
+  video.style.display = 'none';
+
+  if (stream) { stream.getTracks().forEach(t => t.stop()); }
+
+  document.getElementById('btn-capture').style.display = 'none';
+  document.getElementById('btn-retake').style.display = 'block';
+  document.getElementById('face-status').innerHTML = '<div class="smart-alert success mt-2"><i class="fas fa-check-circle me-2"></i>Photo captured! Face will be enrolled.</div>';
+}
+
+function retakePhoto() {
+  document.getElementById('captured-img').style.display = 'none';
+  document.getElementById('webcam-photo-data').value = '';
+  document.getElementById('btn-retake').style.display = 'none';
+  document.getElementById('btn-start').style.display = 'block';
+  document.getElementById('face-status').innerHTML = '';
+  document.getElementById('webcam-placeholder').style.display = 'block';
+}
+</script>
+{% endblock %}

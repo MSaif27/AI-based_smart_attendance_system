@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+{% if role == 'hod' %}
+<!-- HOD DASHBOARD -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#8B0000;">
+      <div class="num">{{ total_faculty }}</div>
+      <div class="label">Faculty Members</div>
+      <div class="icon"><i class="fas fa-chalkboard-teacher"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#f59e0b;">
+      <div class="num">{{ total_students }}</div>
+      <div class="label">Total Students</div>
+      <div class="icon"><i class="fas fa-user-graduate"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#10b981;">
+      <div class="num">{{ total_sessions }}</div>
+      <div class="label">Total Sessions</div>
+      <div class="icon"><i class="fas fa-calendar-check"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#818cf8;">
+      <div class="num">{{ profile.department.code|default:"—" }}</div>
+      <div class="label">Your Department</div>
+      <div class="icon"><i class="fas fa-building"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="glass-card">
+      <div class="card-head"><i class="fas fa-chalkboard-teacher"></i> Recent Faculty</div>
+      <table class="smart-table">
+        <thead><tr><th>Faculty</th><th>Employee ID</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for f in recent_faculty %}
+          <tr>
+            <td>
+              <strong style="color:white;">{{ f.name }}</strong><br>
+              <span style="color:var(--text-muted);font-size:12px;">{{ f.qualification }}</span>
+            </td>
+            <td><code style="color:var(--gold);">{{ f.employee_id }}</code></td>
+            <td>{% if f.is_active %}<span class="badge-present">Active</span>{% else %}<span class="badge-absent">Inactive</span>{% endif %}</td>
+            <td><a href="{% url 'edit_faculty' f.pk %}" class="btn-ghost" style="padding:6px 12px;font-size:12px;">Edit</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">No faculty yet. <a href="{% url 'add_faculty' %}" style="color:var(--gold);">Add one →</a></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="glass-card">
+      <div class="card-head"><i class="fas fa-building"></i> Departments</div>
+      <div class="card-body-pad">
+        {% for d in departments %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-weight:600;color:white;">{{ d.name }}</div>
+            <code style="color:var(--text-muted);font-size:12px;">{{ d.code }}</code>
+          </div>
+          <div style="text-align:right;font-size:12px;color:var(--text-muted);">
+            {{ d.total_students }} students
+          </div>
+        </div>
+        {% empty %}
+        <p style="color:var(--text-muted);text-align:center;padding:20px 0;">No departments. <a href="{% url 'manage_departments' %}" style="color:var(--gold);">Add →</a></p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% elif role == 'faculty' %}
+<!-- FACULTY DASHBOARD -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#8B0000;">
+      <div class="num">{{ total_sessions }}</div>
+      <div class="label">Total Sessions</div>
+      <div class="icon"><i class="fas fa-list"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#f59e0b;">
+      <div class="num">{{ sessions_today }}</div>
+      <div class="label">Sessions Today</div>
+      <div class="icon"><i class="fas fa-calendar-day"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <a href="{% url 'create_session' %}" style="text-decoration:none;">
+      <div class="stat-card" style="--accent:#10b981;cursor:pointer;">
+        <div class="num" style="color:#10b981;">+</div>
+        <div class="label">New Session</div>
+        <div class="icon"><i class="fas fa-plus"></i></div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#818cf8;">
+      <div class="num">{{ my_courses.count }}</div>
+      <div class="label">My Courses</div>
+      <div class="icon"><i class="fas fa-book"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="glass-card">
+  <div class="card-head"><i class="fas fa-history"></i> Recent Sessions</div>
+  <table class="smart-table">
+    <thead><tr><th>Course</th><th>Date</th><th>Section</th><th>Present</th><th>Absent</th><th>Mode</th><th></th></tr></thead>
+    <tbody>
+      {% for s in recent_sessions %}
+      <tr>
+        <td><strong style="color:white;">{{ s.course.code }}</strong><br><span style="font-size:12px;color:var(--text-muted);">{{ s.course.name }}</span></td>
+        <td style="color:var(--text-muted);">{{ s.date }}</td>
+        <td><code style="color:var(--gold);">{{ s.section }}</code></td>
+        <td><span class="badge-present">{{ s.present_count }}</span></td>
+        <td><span class="badge-absent">{{ s.absent_count }}</span></td>
+        <td>{% if s.mode == 'face' %}<span class="badge-face">Face AI</span>{% elif s.mode == 'both' %}<span class="badge-face">Both</span>{% else %}<span class="badge-manual">Manual</span>{% endif %}</td>
+        <td><a href="{% url 'session_report' s.pk %}" class="btn-ghost" style="padding:6px 12px;font-size:12px;">View</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px;">
+        No sessions yet. <a href="{% url 'create_session' %}" style="color:var(--gold);">Create your first →</a>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% elif role == 'student' %}
+<!-- STUDENT DASHBOARD -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:{% if percentage >= 75 %}#10b981{% else %}#ef4444{% endif %};">
+      <div class="num" style="color:{% if percentage >= 75 %}#10b981{% else %}#ef4444{% endif %};">{{ percentage }}%</div>
+      <div class="label">Overall Attendance</div>
+      <div class="prog-bar mt-3"><div class="fill" style="width:{{ percentage }}%; background:{% if percentage >= 75 %}var(--success){% else %}var(--danger){% endif %};"></div></div>
+      {% if percentage < 75 %}<div style="color:#ef4444;font-size:11px;margin-top:8px;"><i class="fas fa-exclamation-triangle me-1"></i>Below 75% threshold!</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#10b981;">
+      <div class="num" style="color:#10b981;">{{ present }}</div>
+      <div class="label">Classes Present</div>
+      <div class="icon"><i class="fas fa-check-circle"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#ef4444;">
+      <div class="num" style="color:#ef4444;">{{ absent }}</div>
+      <div class="label">Classes Absent</div>
+      <div class="icon"><i class="fas fa-times-circle"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="--accent:#f59e0b;">
+      <div class="num" style="color:#f59e0b;">{{ notifications.count }}</div>
+      <div class="label">Unread Alerts</div>
+      <div class="icon"><i class="fas fa-bell"></i></div>
+    </div>
+  </div>
+</div>
+
+{% if notifications %}
+<div class="smart-alert warning mb-4">
+  <i class="fas fa-bell me-2"></i> You have {{ notifications.count }} unread absence alert(s).
+  <a href="{% url 'notifications' %}" style="color:var(--gold);margin-left:8px;">View all →</a>
+</div>
+{% endif %}
+
+<div class="glass-card">
+  <div class="card-head"><i class="fas fa-history"></i> Recent Attendance</div>
+  <table class="smart-table">
+    <thead><tr><th>Date</th><th>Course</th><th>Status</th><th>Method</th></tr></thead>
+    <tbody>
+      {% for r in recent_records %}
+      <tr>
+        <td style="color:var(--text-muted);">{{ r.session.date }}</td>
+        <td><strong style="color:white;">{{ r.session.course.code }}</strong></td>
+        <td><span class="badge-{{ r.status }}">{{ r.status|capfirst }}</span></td>
+        <td>{% if r.method == 'face' %}<span class="badge-face"><i class="fas fa-face-smile-wink me-1"></i>Face AI</span>{% else %}<span class="badge-manual">Manual</span>{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">No attendance records yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

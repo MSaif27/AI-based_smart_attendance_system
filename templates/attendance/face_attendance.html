@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% block page_title %}Face Recognition Attendance{% endblock %}
+{% block breadcrumb %}Sessions → Face AI{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'mark_attendance' session.pk %}" class="btn-ghost">
+  <i class="fas fa-list me-2"></i>Switch to Manual
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Left: Camera Panel -->
+  <div class="col-md-6">
+    <div class="glass-card">
+      <div class="card-head"><i class="fas fa-camera"></i> Camera — {{ session.course.code }} | {{ session.date }} | Sec {{ session.section }}</div>
+      <div class="card-body-pad">
+
+        <!-- Mode Tabs -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;">
+          <button onclick="switchMode('webcam')" id="mode-webcam" class="btn-maroon" style="flex:1;padding:10px;font-size:13px;">
+            <i class="fas fa-video me-2"></i>Live Webcam
+          </button>
+          <button onclick="switchMode('upload')" id="mode-upload" class="btn-ghost" style="flex:1;padding:10px;font-size:13px;">
+            <i class="fas fa-upload me-2"></i>Upload Photo
+          </button>
+        </div>
+
+        <!-- Webcam Mode -->
+        <div id="webcam-mode">
+          <div class="webcam-box" style="position:relative;">
+            <video id="live-video" width="100%" style="border-radius:12px;display:none;" autoplay playsinline></video>
+            <canvas id="snapshot-canvas" style="display:none;"></canvas>
+            <div id="cam-placeholder" style="padding:60px 20px;color:var(--text-muted);text-align:center;">
+              <i class="fas fa-video" style="font-size:52px;opacity:0.2;display:block;margin-bottom:16px;"></i>
+              <p>Start camera to begin face detection</p>
+            </div>
+            <!-- Scanning overlay -->
+            <div id="scan-overlay" style="display:none;position:absolute;inset:0;border-radius:12px;border:2px solid var(--gold);pointer-events:none;animation:pulse 1.5s infinite;"></div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button onclick="startCam()" id="cam-start" class="btn-gold" style="flex:1;">
+              <i class="fas fa-video me-2"></i>Start Camera
+            </button>
+            <button onclick="captureAndRecognize()" id="cam-scan" class="btn-maroon" style="flex:1;display:none;">
+              <i class="fas fa-bolt me-2"></i>Scan Faces Now
+            </button>
+            <button onclick="autoScan()" id="cam-auto" class="btn-ghost" style="display:none;padding:10px 14px;" title="Auto scan every 5s">
+              <i class="fas fa-sync"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Upload Mode -->
+        <div id="upload-mode" style="display:none;">
+          <div class="webcam-box" style="text-align:center;padding:40px;">
+            <i class="fas fa-image" style="font-size:48px;color:var(--text-muted);opacity:0.3;display:block;margin-bottom:16px;"></i>
+            <p style="color:var(--text-muted);margin-bottom:16px;">Upload a classroom photo or group photo</p>
+            <input type="file" id="upload-photo" accept="image/*" class="form-control" onchange="previewUpload(this)">
+            <img id="upload-preview" src="" style="display:none;width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:12px;">
+          </div>
+          <button onclick="recognizeFromUpload()" class="btn-maroon w-100 mt-3" style="padding:12px;">
+            <i class="fas fa-search me-2"></i>Recognize Faces in Photo
+          </button>
+        </div>
+
+        <!-- Processing indicator -->
+        <div id="processing" style="display:none;text-align:center;padding:16px;">
+          <div style="color:var(--gold);font-size:14px;">
+            <i class="fas fa-spinner fa-spin me-2"></i>Processing with DeepFace AI...
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div id="recognition-results" style="margin-top:16px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Student Status -->
+  <div class="col-md-6">
+    <div class="glass-card" style="position:sticky;top:80px;">
+      <div class="card-head" style="justify-content:space-between;">
+        <span><i class="fas fa-users"></i> Students — Section {{ session.section }}</span>
+        <div style="display:flex;gap:8px;">
+          <span class="badge-present" id="present-count-badge">0 present</span>
+          <span class="badge-absent" id="absent-count-badge">{{ students.count }} absent</span>
+        </div>
+      </div>
+
+      <div style="max-height:480px;overflow-y:auto;">
+        <table class="smart-table">
+          <thead><tr><th>Student</th><th>Status</th><th>Method</th></tr></thead>
+          <tbody id="student-table-body">
+            {% for student in students %}
+            <tr id="row-{{ student.id }}" style="transition:background 0.3s;">
+              <td>
+                {% if student.photo %}
+                <img src="{{ student.photo.url }}" class="student-avatar me-2" style="vertical-align:middle;">
+                {% else %}
+                <span class="student-avatar-placeholder me-2" style="vertical-align:middle;font-size:12px;">{{ student.name|first }}</span>
+                {% endif %}
+                <div style="display:inline-block;vertical-align:middle;">
+                  <div style="font-weight:600;color:white;font-size:13px;">{{ student.name }}</div>
+                  <div style="font-size:11px;color:var(--text-muted);">{{ student.roll_number }}</div>
+                </div>
+              </td>
+              <td>
+                <span class="badge-absent" id="status-{{ student.id }}">Absent</span>
+                {% if not student.face_enrolled %}
+                <span style="font-size:10px;color:var(--text-muted);display:block;margin-top:2px;"><i class="fas fa-exclamation-triangle me-1" style="color:#f59e0b;"></i>No face</span>
+                {% endif %}
+              </td>
+              <td>
+                <span id="method-{{ student.id }}" style="font-size:11px;color:var(--text-muted);">—</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="padding:16px;border-top:1px solid var(--border);">
+        <form method="post" action="{% url 'finalize_face_session' session.pk %}">
+          {% csrf_token %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn-gold" style="flex:1;padding:12px;font-weight:700;">
+              <i class="fas fa-check-circle me-2"></i>Finalize & Save
+            </button>
+            <a href="{% url 'mark_attendance' session.pk %}" class="btn-ghost" style="padding:12px;">Manual Override</a>
+          </div>
+        </form>
+        <p style="color:var(--text-muted);font-size:11px;margin-top:8px;text-align:center;">
+          <i class="fas fa-info-circle me-1"></i>
+          {{ enrolled_count }}/{{ students.count }} students have face enrolled.
+          Absent students will be auto-notified on finalize.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let videoStream = null;
+let autoScanInterval = null;
+let autoScanActive = false;
+const SESSION_PK = {{ session.pk }};
+
+const STUDENTS = {
+  {% for s in students %}
+  {{ s.id }}: { name: "{{ s.name }}", roll: "{{ s.roll_number }}", enrolled: {{ s.face_enrolled|yesno:"true,false" }} },
+  {% endfor %}
+};
+
+async function startCam() {
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({ video: { width:640, height:480 } });
+    document.getElementById('live-video').srcObject = videoStream;
+    document.getElementById('live-video').style.display = 'block';
+    document.getElementById('cam-placeholder').style.display = 'none';
+    document.getElementById('cam-start').style.display = 'none';
+    document.getElementById('cam-scan').style.display = 'block';
+    document.getElementById('cam-auto').style.display = 'block';
+  } catch(e) {
+    showResult('danger', 'Camera access denied. Use Upload mode instead.');
+  }
+}
+
+function captureAndRecognize() {
+  const video = document.getElementById('live-video');
+  const canvas = document.getElementById('snapshot-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  document.getElementById('scan-overlay').style.display = 'block';
+
+  const imageData = canvas.toDataURL('image/jpeg', 0.8);
+  sendForRecognition(imageData, 'webcam');
+}
+
+function autoScan() {
+  if (autoScanActive) {
+    clearInterval(autoScanInterval);
+    autoScanActive = false;
+    document.getElementById('cam-auto').innerHTML = '<i class="fas fa-sync"></i>';
+    document.getElementById('cam-auto').className = 'btn-ghost';
+  } else {
+    autoScanActive = true;
+    document.getElementById('cam-auto').innerHTML = '<i class="fas fa-stop"></i>';
+    document.getElementById('cam-auto').className = 'btn-maroon';
+    captureAndRecognize();
+    autoScanInterval = setInterval(captureAndRecognize, 5000);
+  }
+}
+
+async function sendForRecognition(imageData, mode) {
+  document.getElementById('processing').style.display = 'block';
+  try {
+    const resp = await fetch(`/api/sessions/${SESSION_PK}/recognize/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ image: imageData })
+    });
+    const data = await resp.json();
+    document.getElementById('scan-overlay').style.display = 'none';
+    document.getElementById('processing').style.display = 'none';
+
+    if (data.success) {
+      if (data.recognized.length > 0) {
+        data.recognized.forEach(r => markStudentPresent(r.student_id, 'Face AI', r.confidence));
+        showResult('success', `✅ Recognized ${data.recognized.length} student(s): ${data.recognized.map(r => r.name).join(', ')}`);
+      } else {
+        showResult('info', '🔍 No new faces recognized. Try scanning again.');
+      }
+      updateCounts(data.total_present);
+    } else {
+      showResult('danger', `Error: ${data.error}`);
+    }
+  } catch(e) {
+    document.getElementById('processing').style.display = 'none';
+    showResult('danger', 'Recognition failed. Check if DeepFace is installed.');
+  }
+}
+
+function previewUpload(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('upload-preview').src = e.target.result;
+      document.getElementById('upload-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function recognizeFromUpload() {
+  const fileInput = document.getElementById('upload-photo');
+  if (!fileInput.files.length) {
+    showResult('warning', 'Please select a photo first.');
+    return;
+  }
+  document.getElementById('processing').style.display = 'block';
+  const formData = new FormData();
+  formData.append('photo', fileInput.files[0]);
+  formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+  try {
+    const resp = await fetch(`/api/sessions/${SESSION_PK}/upload-recognize/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      body: formData
+    });
+    const data = await resp.json();
+    document.getElementById('processing').style.display = 'none';
+
+    if (data.success) {
+      data.recognized.forEach(r => markStudentPresent(r.student_id, 'Face AI', r.confidence));
+      showResult('success', `✅ Found ${data.total} student(s) in photo!`);
+      refreshStats();
+    } else {
+      showResult('danger', `Error: ${data.error}`);
+    }
+  } catch(e) {
+    document.getElementById('processing').style.display = 'none';
+    showResult('danger', 'Upload recognition failed.');
+  }
+}
+
+function markStudentPresent(studentId, method, confidence) {
+  const row = document.getElementById(`row-${studentId}`);
+  const badge = document.getElementById(`status-${studentId}`);
+  const methodEl = document.getElementById(`method-${studentId}`);
+  if (!row) return;
+
+  row.style.background = 'rgba(16,185,129,0.08)';
+  badge.className = 'badge-present';
+  badge.textContent = 'Present';
+  if (method === 'Face AI') {
+    methodEl.innerHTML = `<span class="badge-face"><i class="fas fa-face-smile-wink me-1"></i>Face AI ${confidence}%</span>`;
+  } else {
+    methodEl.innerHTML = `<span class="badge-manual">Manual</span>`;
+  }
+}
+
+async function refreshStats() {
+  const resp = await fetch(`/api/sessions/${SESSION_PK}/stats/`);
+  const data = await resp.json();
+  updateCounts(data.present);
+  document.getElementById('absent-count-badge').textContent = `${data.absent} absent`;
+}
+
+function updateCounts(present) {
+  document.getElementById('present-count-badge').textContent = `${present} present`;
+}
+
+function switchMode(mode) {
+  document.getElementById('webcam-mode').style.display = mode === 'webcam' ? 'block' : 'none';
+  document.getElementById('upload-mode').style.display = mode === 'upload' ? 'block' : 'none';
+  document.getElementById('mode-webcam').className = mode === 'webcam' ? 'btn-maroon' : 'btn-ghost';
+  document.getElementById('mode-upload').className = mode === 'upload' ? 'btn-maroon' : 'btn-ghost';
+}
+
+function showResult(type, msg) {
+  document.getElementById('recognition-results').innerHTML =
+    `<div class="smart-alert ${type}">${msg}</div>`;
+  setTimeout(() => document.getElementById('recognition-results').innerHTML = '', 5000);
+}
+
+function getCookie(name) {
+  const val = `; ${document.cookie}`;
+  const parts = val.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+// Load initial stats
+refreshStats();
+</script>
+{% endblock %}

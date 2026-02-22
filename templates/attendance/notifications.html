@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+{% for n in notifications %}
+<div class="glass-card mb-3" style="border-left:3px solid #ef4444;">
+<div class="card-body-pad" style="padding:16px 20px;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;">
+<div><i class="fas fa-exclamation-triangle me-2" style="color:#ef4444;"></i>{{ n.message }}</div>
+<span style="color:var(--text-muted);font-size:11px;white-space:nowrap;margin-left:16px;">{{ n.sent_at|date:"M j, H:i" }}</span>
+</div></div></div>
+{% empty %}
+<div class="glass-card"><div class="card-body-pad" style="text-align:center;padding:60px;">
+<i class="fas fa-check-circle" style="font-size:48px;color:#10b981;display:block;margin-bottom:16px;"></i>
+<h4 style="color:white;">All clear!</h4>
+<p style="color:var(--text-muted);">No absence notifications. Keep it up!</p>
+</div></div>
+{% endfor %}
+</div></div>
+{% endblock %}

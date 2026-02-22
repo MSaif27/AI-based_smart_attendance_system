@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block page_title %}New Attendance Session{% endblock %}
+{% block breadcrumb %}Sessions → Create{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="glass-card">
+      <div class="card-head"><i class="fas fa-plus-circle"></i> Session Details</div>
+      <div class="card-body-pad">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Course</label>
+              {{ form.course }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Section</label>
+              {{ form.section }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date</label>
+              {{ form.date }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Start Time</label>
+              {{ form.start_time }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Attendance Mode</label>
+              {{ form.mode }}
+            </div>
+          </div>
+
+          <div class="row g-2 mt-4">
+            <div class="col-md-6">
+              <button type="submit" class="btn-maroon w-100" style="padding:13px;">
+                <i class="fas fa-check me-2"></i>Start Session
+              </button>
+            </div>
+            <div class="col-md-6">
+              <a href="{% url 'dashboard' %}" class="btn-ghost w-100 d-block text-center" style="padding:13px;">Cancel</a>
+            </div>
+          </div>
+        </form>
+
+        <div class="smart-alert info mt-4" style="font-size:13px;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Face Recognition</strong> mode uses DeepFace AI to auto-detect students from webcam or uploaded photos.
+          <strong>Both</strong> mode allows switching between face and manual marking.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

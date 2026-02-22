@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block page_title %}Add Faculty{% endblock %}
+{% block breadcrumb %}HOD → Faculty → Add{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-8">
+<div class="glass-card">
+<div class="card-head"><i class="fas fa-user-tie"></i> New Faculty Member</div>
+<div class="card-body-pad">
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+<p style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:12px;">Login Credentials</p>
+<div class="row g-3 mb-4">
+<div class="col-md-4"><label class="form-label">Username *</label>{{ user_form.username }}</div>
+<div class="col-md-4"><label class="form-label">First Name</label>{{ user_form.first_name }}</div>
+<div class="col-md-4"><label class="form-label">Last Name</label>{{ user_form.last_name }}</div>
+<div class="col-md-4"><label class="form-label">Password *</label>{{ user_form.password }}</div>
+</div>
+<hr style="border-color:var(--border);">
+<p style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin:16px 0 12px;">Faculty Details</p>
+<div class="row g-3">
+<div class="col-md-6"><label class="form-label">Full Name *</label>{{ faculty_form.name }}</div>
+<div class="col-md-6"><label class="form-label">Employee ID *</label>{{ faculty_form.employee_id }}</div>
+<div class="col-md-6"><label class="form-label">Email *</label>{{ faculty_form.email }}</div>
+<div class="col-md-6"><label class="form-label">Phone</label>{{ faculty_form.phone }}</div>
+<div class="col-md-6"><label class="form-label">Qualification</label>{{ faculty_form.qualification }}</div>
+<div class="col-md-6"><label class="form-label">Joining Date</label>{{ faculty_form.joined_date }}</div>
+<div class="col-12"><label class="form-label">Assign Courses</label>{{ faculty_form.courses }}</div>
+<div class="col-12"><label class="form-label">Photo</label>{{ faculty_form.photo }}</div>
+</div>
+<div class="d-flex gap-3 mt-4">
+<button type="submit" class="btn-maroon" style="padding:12px 28px;">Save Faculty</button>
+<a href="{% url 'faculty_list' %}" class="btn-ghost" style="padding:12px 20px;">Cancel</a>
+</div>
+</form>
+</div>
+</div>
+</div></div>
+{% endblock %}

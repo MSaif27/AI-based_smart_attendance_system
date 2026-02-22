@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block page_title %}Absentees Report{% endblock %}
+{% block content %}
+<div class="glass-card mb-4"><div class="card-body-pad" style="padding:16px 24px;">
+<form method="get" class="d-flex gap-3 align-items-end">
+<div><label class="form-label">Date</label><input type="date" name="date" class="form-control" value="{{ target_date }}"></div>
+<div style="min-width:200px;"><label class="form-label">Course</label><select name="course" class="form-control"><option value="">All Courses</option>{% for c in courses %}<option value="{{ c.id }}" {% if course_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.code }}</option>{% endfor %}</select></div>
+<button type="submit" class="btn-maroon" style="padding:10px 20px;">Search</button>
+</form></div></div>
+<div class="glass-card">
+<div class="card-head" style="justify-content:space-between;"><span><i class="fas fa-user-times"></i> Absent Students — {{ target_date }}</span><span class="badge-absent">{{ absentees.count }} absent</span></div>
+<table class="smart-table">
+<thead><tr><th>#</th><th>Student</th><th>Roll No</th><th>Course</th><th>Section</th><th>Parent Email</th></tr></thead>
+<tbody>{% for r in absentees %}
+<tr>
+<td style="color:var(--text-muted);">{{ forloop.counter }}</td>
+<td><a href="{% url 'student_detail' r.student.pk %}" style="color:white;text-decoration:none;font-weight:600;">{{ r.student.name }}</a></td>
+<td><code style="color:var(--gold);">{{ r.student.roll_number }}</code></td>
+<td>{{ r.session.course.code }}</td>
+<td>{{ r.session.section }}</td>
+<td style="font-size:12px;color:var(--text-muted);">{{ r.student.parent_email|default:"—" }}</td>
+</tr>{% empty %}
+<tr><td colspan="6" style="text-align:center;color:#10b981;padding:50px;"><i class="fas fa-check-circle" style="font-size:32px;display:block;margin-bottom:12px;"></i>No absences on this date!</td></tr>
+{% endfor %}</tbody>
+</table></div>
+{% endblock %}

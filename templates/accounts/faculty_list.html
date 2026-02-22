@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block page_title %}Faculty{% endblock %}
+{% block breadcrumb %}HOD → Faculty{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'add_faculty' %}" class="btn-maroon" style="padding:8px 16px;font-size:13px;"><i class="fas fa-plus me-2"></i>Add Faculty</a>
+{% endblock %}
+{% block content %}
+<div class="glass-card mb-4"><div class="card-body-pad" style="padding:16px 24px;">
+<form method="get" class="d-flex gap-3">
+<input type="text" name="q" class="form-control" placeholder="Search name or employee ID..." value="{{ q }}" style="max-width:400px;">
+<button type="submit" class="btn-maroon" style="padding:10px 20px;">Search</button>
+<a href="{% url 'faculty_list' %}" class="btn-ghost" style="padding:10px 16px;">Clear</a>
+</form></div></div>
+<div class="glass-card">
+<div class="card-head"><i class="fas fa-chalkboard-teacher"></i> Faculty Members</div>
+<table class="smart-table">
+<thead><tr><th>Faculty</th><th>Employee ID</th><th>Email</th><th>Courses</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody>
+{% for f in faculty %}
+<tr>
+<td>
+{% if f.photo %}<img src="{{ f.photo.url }}" class="student-avatar me-2">
+{% else %}<span class="student-avatar-placeholder me-2">{{ f.name|first }}</span>{% endif %}
+<div style="display:inline-block;vertical-align:middle;">
+<div style="font-weight:600;color:white;">{{ f.name }}</div>
+<div style="font-size:11px;color:var(--text-muted);">{{ f.qualification }}</div>
+</div>
+</td>
+<td><code style="color:var(--gold);">{{ f.employee_id }}</code></td>
+<td style="font-size:13px;color:var(--text-muted);">{{ f.email }}</td>
+<td style="font-size:12px;">{{ f.courses.count }} course(s)</td>
+<td>{% if f.is_active %}<span class="badge-present">Active</span>{% else %}<span class="badge-absent">Inactive</span>{% endif %}</td>
+<td><a href="{% url 'edit_faculty' f.pk %}" class="btn-ghost" style="padding:5px 12px;font-size:12px;">Edit</a></td>
+</tr>
+{% empty %}
+<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:50px;">No faculty. <a href="{% url 'add_faculty' %}" style="color:var(--gold);">Add one →</a></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}
